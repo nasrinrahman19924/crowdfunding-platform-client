@@ -1,156 +1,91 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import {
-  Button,
-  Card,
-  Input,
-  Label,
-  ListBox,
-  Select,
-  TextField,
-} from "@heroui/react";
+import { authClient } from "@/lib/auth-client";
 
-export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    photo: "",
-    password: "",
-    role: "supporter",
-  });
+export default function DashboardPage() {
+  const router = useRouter();
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        // Step 1: Get Better Auth session
+        const { data, error } = await authClient.getSession();
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+        if (error || !data?.user) {
+          router.replace("/login");
+          return;
+        }
 
-    console.log(formData);
-  };
+        setSession(data);
+
+        // Step 2: Get crowdfunding profile from MongoDB
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile?email=${encodeURIComponent(
+            data.user.email,
+          )}`,
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error("Profile fetch failed:", result);
+          return;
+        }
+
+        setProfile(result.user);
+      } catch (error) {
+        console.error("Dashboard error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p>Loading dashboard...</p>
+      </main>
+    );
+  }
+
+  if (!session?.user || !profile) {
+    return null;
+  }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-md">
-        <Card.Header className="text-center">
-          <Card.Title className="text-2xl font-bold">
-            Create Your Account
-          </Card.Title>
+    <main className="min-h-screen p-6">
+      <div className="mx-auto max-w-5xl">
+        <h1 className="text-3xl font-bold">Welcome, {profile.name} 👋</h1>
 
-          <Card.Description>Join our crowdfunding community</Card.Description>
-        </Card.Header>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border p-5">
+            <p className="text-sm">Role</p>
+            <p className="mt-2 text-xl font-semibold capitalize">
+              {profile.role}
+            </p>
+          </div>
 
-        <Card.Content>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            {/* Name */}
-            <TextField isRequired>
-              <Label>Name</Label>
+          <div className="rounded-xl border p-5">
+            <p className="text-sm">Available Credits</p>
+            <p className="mt-2 text-xl font-semibold">{profile.credits}</p>
+          </div>
 
-              <Input
-                name="name"
-                placeholder="Enter your name"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </TextField>
-
-            {/* Email */}
-            <TextField isRequired>
-              <Label>Email</Label>
-
-              <Input
-                type="email"
-                name="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </TextField>
-
-            {/* Profile Picture */}
-            <TextField>
-              <Label>Profile Picture URL</Label>
-
-              <Input
-                type="url"
-                name="photo"
-                placeholder="https://example.com/photo.jpg"
-                value={formData.photo}
-                onChange={handleChange}
-              />
-            </TextField>
-
-            {/* Password */}
-            <TextField isRequired>
-              <Label>Password</Label>
-
-              <Input
-                type="password"
-                name="password"
-                placeholder="Create a strong password"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </TextField>
-
-            {/* Role */}
-            <Select
-              value={formData.role}
-              onChange={(value) => {
-                setFormData((previous) => ({
-                  ...previous,
-                  role: value,
-                }));
-              }}
-              placeholder="Select your role"
-              isRequired
-            >
-              <Label>I want to join as</Label>
-
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-
-              <Select.Popover>
-                <ListBox>
-                  <ListBox.Item id="supporter" textValue="Supporter">
-                    Supporter
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-
-                  <ListBox.Item id="creator" textValue="Creator">
-                    Creator
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                </ListBox>
-              </Select.Popover>
-            </Select>
-
-            {/* Submit */}
-            <Button type="submit" className="w-full">
-              Create Account
-            </Button>
-          </form>
-        </Card.Content>
-
-        <Card.Footer className="justify-center">
-          <p className="text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="font-semibold underline">
-              Login
-            </Link>
-          </p>
-        </Card.Footer>
-      </Card>
+          <div className="rounded-xl border p-5">
+            <p className="text-sm">Email</p>
+            <p className="mt-2 break-all font-semibold">{profile.email}</p>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
