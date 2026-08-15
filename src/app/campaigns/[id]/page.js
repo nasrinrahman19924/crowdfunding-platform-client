@@ -11,6 +11,8 @@ export default function CampaignDetailsPage() {
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [supporters, setSupporters] = useState([]);
+  const [supportersLoading, setSupportersLoading] = useState(true);
 
   const [supportAmount, setSupportAmount] = useState("");
   const [supporting, setSupporting] = useState(false);
@@ -42,6 +44,33 @@ export default function CampaignDetailsPage() {
 
     if (params.id) {
       loadCampaign();
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    const loadSupporters = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/${params.id}/supporters`,
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error("Failed to load supporters:", result);
+          return;
+        }
+
+        setSupporters(result.supporters || []);
+      } catch (error) {
+        console.error("Load supporters error:", error);
+      } finally {
+        setSupportersLoading(false);
+      }
+    };
+
+    if (params.id) {
+      loadSupporters();
     }
   }, [params.id]);
 
@@ -115,6 +144,7 @@ export default function CampaignDetailsPage() {
         return;
       }
 
+      // Support API
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/${params.id}/support`,
         {
@@ -136,9 +166,22 @@ export default function CampaignDetailsPage() {
         return;
       }
 
-      // Update campaign and credits
+      // Update campaign + credits
       setCampaign(result.campaign);
       setUserCredits(result.credits);
+
+      // Refresh supporters list
+      const supportersResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/${params.id}/supporters`,
+      );
+
+      const supportersResult = await supportersResponse.json();
+
+      if (supportersResponse.ok) {
+        setSupporters(supportersResult.supporters || []);
+      }
+
+      // Clear input
       setSupportAmount("");
 
       setSupportMessage(
@@ -345,6 +388,72 @@ export default function CampaignDetailsPage() {
                 <p className="mt-3 text-sm text-default-500">
                   {supportMessage}
                 </p>
+              )}
+            </div>
+            {/* Supporters */}
+            <div className="mt-8 border-t pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Supporters</h2>
+
+                  <p className="mt-1 text-sm text-default-500">
+                    {supporters.length} contribution
+                    {supporters.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-xs text-default-500">Total Raised</p>
+
+                  <p className="text-lg font-bold">
+                    ৳{campaign.raisedAmount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {supportersLoading ? (
+                <p className="mt-5 text-sm text-default-500">
+                  Loading supporters...
+                </p>
+              ) : supporters.length === 0 ? (
+                <div className="mt-5 rounded-xl border border-dashed p-6 text-center">
+                  <p className="text-sm text-default-500">
+                    No one has supported this campaign yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  {supporters.map((supporter) => {
+                    const formattedDate = new Date(
+                      supporter.createdAt,
+                    ).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    });
+
+                    return (
+                      <div
+                        key={supporter._id}
+                        className="flex items-center justify-between rounded-xl border p-4"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {supporter.supporterName}
+                          </p>
+
+                          <p className="mt-1 text-xs text-default-500">
+                            Supported on {formattedDate}
+                          </p>
+                        </div>
+
+                        <p className="font-semibold">
+                          ৳{Number(supporter.amount).toLocaleString()}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

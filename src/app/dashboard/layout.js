@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <DashboardProvider profile={profile}>
+    <DashboardProvider profile={profile} setProfile={setProfile}>
       <div className="min-h-screen bg-background">
         <div className="flex min-h-screen">
           {/* Desktop Sidebar */}

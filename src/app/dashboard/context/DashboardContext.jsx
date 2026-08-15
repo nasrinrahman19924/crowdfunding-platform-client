@@ -4,9 +4,9 @@ import { createContext, useContext } from "react";
 
 const DashboardContext = createContext(null);
 
-export function DashboardProvider({ profile, children }) {
+export function DashboardProvider({ profile, setProfile, children }) {
   return (
-    <DashboardContext.Provider value={{ profile }}>
+    <DashboardContext.Provider value={{ profile, setProfile }}>
       {children}
     </DashboardContext.Provider>
   );

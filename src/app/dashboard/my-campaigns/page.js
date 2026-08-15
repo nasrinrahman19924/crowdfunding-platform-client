@@ -26,11 +26,10 @@ export default function MyCampaignsPage() {
         const user = sessionData.user;
 
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns?creatorEmail=${encodeURIComponent(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/creator?creatorEmail=${encodeURIComponent(
             user.email,
           )}`,
         );
-
         const result = await response.json();
 
         if (!response.ok) {
@@ -91,7 +90,11 @@ export default function MyCampaignsPage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {campaigns.map((campaign) => (
-              <CampaignCard key={campaign._id} campaign={campaign} />
+              <CampaignCard
+                key={campaign._id}
+                campaign={campaign}
+                isOwner={true}
+              />
             ))}
           </div>
         )}

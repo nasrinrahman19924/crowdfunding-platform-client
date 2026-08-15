@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function CampaignCard({ campaign, isOwner = false }) {
+  const router = useRouter();
+
   const progress =
     campaign.goalAmount > 0
       ? Math.min((campaign.raisedAmount / campaign.goalAmount) * 100, 100)
@@ -22,6 +25,41 @@ export default function CampaignCard({ campaign, isOwner = false }) {
     : `/campaigns/${campaign._id}`;
 
   const editUrl = `/dashboard/my-campaigns/${campaign._id}/edit`;
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this campaign?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns/${campaign._id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Delete campaign failed:", result);
+        alert(result.message || "Failed to delete campaign.");
+        return;
+      }
+
+      alert("Campaign deleted successfully.");
+
+      router.push("/dashboard/my-campaigns");
+      router.refresh();
+    } catch (error) {
+      console.error("Delete campaign error:", error);
+      alert("Something went wrong while deleting the campaign.");
+    }
+  };
 
   return (
     <article className="overflow-hidden rounded-2xl border bg-background shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
@@ -87,7 +125,7 @@ export default function CampaignCard({ campaign, isOwner = false }) {
             <p className="text-xs text-default-500">Goal</p>
 
             <p className="font-semibold">
-              ৳{campaign.goalAmount.toLocaleString()}
+              ৳{Number(campaign.goalAmount || 0).toLocaleString()}
             </p>
           </div>
 
@@ -95,7 +133,7 @@ export default function CampaignCard({ campaign, isOwner = false }) {
             <p className="text-xs text-default-500">Raised</p>
 
             <p className="font-semibold">
-              ৳{campaign.raisedAmount.toLocaleString()}
+              ৳{Number(campaign.raisedAmount || 0).toLocaleString()}
             </p>
           </div>
         </div>
@@ -109,6 +147,7 @@ export default function CampaignCard({ campaign, isOwner = false }) {
 
         {/* Actions */}
         <div className="mt-5 flex gap-2">
+          {/* View Details */}
           <Link
             href={detailsUrl}
             className="flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium transition hover:bg-default-100"
@@ -116,13 +155,28 @@ export default function CampaignCard({ campaign, isOwner = false }) {
             View Details
           </Link>
 
+          
+
+          {/* Owner Actions */}
           {isOwner && (
-            <Link
-              href={editUrl}
-              className="flex-1 rounded-lg bg-primary px-3 py-2 text-center text-sm font-medium text-white transition-opacity hover:opacity-90"
-            >
-              Edit
-            </Link>
+            <>
+              {/* Edit */}
+              <Link
+                href={editUrl}
+                className="flex-1 rounded-lg bg-primary border px-3 py-2 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                Edit
+              </Link>
+
+              {/* Delete */}
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="flex-1 rounded-lg border border-danger px-3 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
+              >
+                Delete
+              </button>
+            </>
           )}
         </div>
       </div>

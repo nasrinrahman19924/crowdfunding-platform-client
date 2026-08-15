@@ -1,91 +1,269 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  Select,
+  ListBox,
+  TextField,
+} from "@heroui/react";
 
 import { authClient } from "@/lib/auth-client";
 
-export default function DashboardPage() {
+export default function RegisterPage() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      role: "supporter",
+      photo: "",
+    },
+  });
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        // Step 1: Get Better Auth session
-        const { data, error } = await authClient.getSession();
+  const onSubmit = async (data) => {
+    try {
+      // ========================================
+      // STEP 1: Create Better Auth account
+      // ========================================
+      const { data: authData, error: authError } =
+        await authClient.signUp.email({
+          email: data.email,
+          password: data.password,
+          name: data.name,
+        });
 
-        if (error || !data?.user) {
-          router.replace("/login");
-          return;
-        }
+      if (authError) {
+        console.error("Registration failed:", authError);
 
-        setSession(data);
+        alert(authError.message || "Registration failed. Please try again.");
 
-        // Step 2: Get crowdfunding profile from MongoDB
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile?email=${encodeURIComponent(
-            data.user.email,
-          )}`,
+        return;
+      }
+
+      console.log("Better Auth registration successful:", authData);
+
+      // ========================================
+      // STEP 2: Create crowdfunding user profile
+      // ========================================
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            photo: data.photo || "",
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Profile creation failed:", result);
+
+        alert(
+          result.message || "Account created, but profile creation failed.",
         );
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          console.error("Profile fetch failed:", result);
-          return;
-        }
-
-        setProfile(result.user);
-      } catch (error) {
-        console.error("Dashboard error:", error);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    loadDashboard();
-  }, [router]);
+      console.log("Crowdfunding profile created:", result);
 
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p>Loading dashboard...</p>
-      </main>
-    );
-  }
+      alert("Registration successful! 🎉");
 
-  if (!session?.user || !profile) {
-    return null;
-  }
+      // ========================================
+      // STEP 3: Go to dashboard
+      // ========================================
+      router.push("/dashboard");
+      router.refresh();
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      alert("Something went wrong. Please try again.");
+    }
+  };
 
   return (
-    <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-bold">Welcome, {profile.name} 👋</h1>
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
+      <Card className="w-full max-w-md">
+        {/* ========================================
+            HEADER
+        ======================================== */}
+        <Card.Header className="text-center">
+          <Card.Title className="text-2xl font-bold">Create Account</Card.Title>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-xl border p-5">
-            <p className="text-sm">Role</p>
-            <p className="mt-2 text-xl font-semibold capitalize">
-              {profile.role}
-            </p>
-          </div>
+          <Card.Description>
+            Join FundNest and start your crowdfunding journey.
+          </Card.Description>
+        </Card.Header>
 
-          <div className="rounded-xl border p-5">
-            <p className="text-sm">Available Credits</p>
-            <p className="mt-2 text-xl font-semibold">{profile.credits}</p>
-          </div>
+        {/* ========================================
+            FORM
+        ======================================== */}
+        <Card.Content>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-5"
+          >
+            {/* Name */}
+            <TextField isRequired>
+              <Label>Name</Label>
 
-          <div className="rounded-xl border p-5">
-            <p className="text-sm">Email</p>
-            <p className="mt-2 break-all font-semibold">{profile.email}</p>
-          </div>
-        </div>
-      </div>
+              <Input
+                type="text"
+                {...register("name", {
+                  required: "Name is required",
+                })}
+                placeholder="Enter your name"
+              />
+
+              {errors.name && (
+                <p className="text-sm text-danger">{errors.name.message}</p>
+              )}
+            </TextField>
+
+            {/* Email */}
+            <TextField isRequired>
+              <Label>Email</Label>
+
+              <Input
+                type="email"
+                {...register("email", {
+                  required: "Email is required",
+                })}
+                placeholder="Enter your email"
+              />
+
+              {errors.email && (
+                <p className="text-sm text-danger">{errors.email.message}</p>
+              )}
+            </TextField>
+
+            {/* Password */}
+            <TextField isRequired>
+              <Label>Password</Label>
+
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: {
+                      value: 8,
+                      message: "Password must be at least 8 characters",
+                    },
+                  })}
+                  placeholder="Enter your password"
+                  className="pr-12 w-full"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-default-500 hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
+
+              {errors.password && (
+                <p className="text-sm text-danger">{errors.password.message}</p>
+              )}
+            </TextField>
+
+            {/* Role */}
+            <TextField isRequired>
+              <Label>Account Type</Label>
+
+              <Select
+                defaultSelectedKey="supporter"
+                onSelectionChange={(value) => {
+                  register("role").onChange({
+                    target: {
+                      name: "role",
+                      value,
+                    },
+                  });
+                }}
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="supporter" textValue="Supporter">
+                      Supporter
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+
+                    <ListBox.Item id="creator" textValue="Creator">
+                      Creator
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+
+              <input type="hidden" {...register("role")} />
+            </TextField>
+
+            {/* Photo */}
+            <TextField>
+              <Label>Profile Photo URL</Label>
+
+              <Input
+                type="url"
+                {...register("photo")}
+                placeholder="https://example.com/photo.jpg"
+              />
+
+              <p className="text-xs text-default-500">Optional</p>
+            </TextField>
+
+            {/* Submit */}
+            <Button type="submit" className="w-full" isDisabled={isSubmitting}>
+              {isSubmitting ? "Creating Account..." : "Register"}
+            </Button>
+          </form>
+        </Card.Content>
+
+        {/* ========================================
+            LOGIN LINK
+        ======================================== */}
+        <Card.Footer className="justify-center">
+          <p className="text-sm">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold underline">
+              Login
+            </Link>
+          </p>
+        </Card.Footer>
+      </Card>
     </main>
   );
 }

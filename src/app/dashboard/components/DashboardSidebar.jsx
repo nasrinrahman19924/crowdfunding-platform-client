@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Button, Separator } from "@heroui/react";
+import { Separator } from "@heroui/react";
 
 const menuItems = {
   supporter: [
@@ -24,6 +24,10 @@ const menuItems = {
 
   admin: [
     { label: "Home", href: "/dashboard" },
+    {
+      label: "Campaign Approvals",
+      href: "/dashboard/admin/campaign-approvals",
+    },
     { label: "Manage Users", href: "/dashboard/manage-users" },
     { label: "Manage Campaigns", href: "/dashboard/manage-campaigns" },
     { label: "Withdrawal Requests", href: "/dashboard/withdrawal-requests" },
@@ -89,16 +93,18 @@ export default function DashboardSidebar({ profile, mobile = false, onClose }) {
                 : pathname.startsWith(item.href);
 
             return (
-              <Button
+              <Link
                 key={item.href}
-                as={Link}
                 href={item.href}
-                variant={isActive ? "secondary" : "light"}
-                className="justify-start"
-                onPress={mobile ? onClose : undefined}
+                onClick={mobile ? onClose : undefined}
+                className={`flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-default-100 text-primary"
+                    : "text-default-700 hover:bg-default-100"
+                }`}
               >
                 {item.label}
-              </Button>
+              </Link>
             );
           })}
         </div>
