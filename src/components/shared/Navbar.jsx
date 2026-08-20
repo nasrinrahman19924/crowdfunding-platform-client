@@ -1,38 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
   const router = useRouter();
 
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, isPending } = authClient.useSession();
+
+  const user = session?.user ?? null;
+  const loading = isPending;
+
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const { data, error } = await authClient.getSession();
-
-        if (error || !data?.user) {
-          setUser(null);
-          return;
-        }
-
-        setUser(data.user);
-      } catch (error) {
-        console.error("Navbar session error:", error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSession();
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -40,9 +21,7 @@ export default function Navbar() {
 
       await authClient.signOut();
 
-      setUser(null);
       router.push("/");
-      router.refresh();
     } catch (error) {
       console.error("Logout error:", error);
     } finally {

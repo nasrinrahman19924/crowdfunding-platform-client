@@ -4,6 +4,7 @@ import Testimonials from "@/components/home/Testimonials";
 import HowItWorks from "@/components/home/HowItWorks";
 import ExploreCategories from "@/components/home/ExploreCategories";
 import PlatformImpact from "@/components/home/PlatformImpact";
+import CTASection from "@/components/home/CTASection";
 
 export default function HomePage() {
   return (
@@ -14,6 +15,7 @@ export default function HomePage() {
       <HowItWorks />
       <ExploreCategories />
       <PlatformImpact />
+      <CTASection/>
     </main>
   );
 }

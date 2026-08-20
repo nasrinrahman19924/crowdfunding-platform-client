@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -34,6 +34,7 @@ const categories = [
 ];
 
 export default function AddCampaignPage() {
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -50,19 +51,15 @@ export default function AddCampaignPage() {
       deadline: "",
     },
   });
-
   const onSubmit = async (data) => {
     try {
-      // 1. Get logged-in user
-      const { data: sessionData, error: sessionError } =
-        await authClient.getSession();
+      // 1. Get JWT token
+      const { data: tokenData, error: tokenError } = await authClient.token();
 
-      if (sessionError || !sessionData?.user) {
-        console.error("Session error:", sessionError);
+      if (tokenError || !tokenData?.token) {
+        console.error("Failed to get JWT token:", tokenError);
         return;
       }
-
-      const user = sessionData.user;
 
       // 2. Prepare campaign data
       const campaignData = {
@@ -72,21 +69,18 @@ export default function AddCampaignPage() {
         category: data.category,
         goalAmount: data.goalAmount,
         deadline: data.deadline,
-
-        // Comes from BetterAuth session
-        creatorEmail: user.email,
-        creatorName: user.name,
       };
 
       console.log("Sending campaign:", campaignData);
 
-      // 3. Send to Express API
+      // 3. Send request with JWT
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/campaigns`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${tokenData.token}`,
           },
           body: JSON.stringify(campaignData),
         },
@@ -102,6 +96,9 @@ export default function AddCampaignPage() {
 
       // 5. Success
       console.log("Campaign created successfully:", result);
+
+      router.push("/dashboard/my-campaigns");
+      router.refresh();
     } catch (error) {
       console.error("Create campaign error:", error);
     }
